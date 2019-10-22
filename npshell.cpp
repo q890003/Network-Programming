@@ -1,5 +1,4 @@
-#include <iostream>
-//#include <string>		
+#include <iostream>		
 #include <cstring>		//strchr()
 #include <vector>
 #include <sstream>
@@ -8,7 +7,6 @@
 #include <unistd.h>		// wait(),exec(), pipe(), fork()
 #include <sys/types.h> //								fork() 
 #include <sys/wait.h>  //wait()
-//#include <sys/stat.h>
 #include <fcntl.h>		//open()
 bool shell_exit = false;
 
@@ -95,12 +93,10 @@ void parse_cmd(stringstream &sscmd){
 	bool shockMarckflag;
 	bool file_flag;
 	bool target_flag;
-	bool unknown_cmd = false;     //unknown command still not work. if "ls | cd", pipe still remain in the npshell. 
 	Pipe_class current_pipe_record;
 	Pipe_class pipe_reached_target;
 
-	while( !sscmd.eof() && !unknown_cmd){      			//check sstream of cmdline is not eof.
-		//unknown command still not work. if "ls | cd", pipe still remain in the npshell. 
+	while( !sscmd.eof()){      			//check sstream of cmdline is not eof.
 		int newProcessIn = STDIN_FILENO;   //shell process's fd 0,1,2 are original one. never changed.
  		int newProcessOut = STDOUT_FILENO;
 		int newProcessErr = STDERR_FILENO;
@@ -109,7 +105,7 @@ void parse_cmd(stringstream &sscmd){
 		shockMarckflag = false;
 		file_flag	= false;
 		target_flag = false;
-		unknown_cmd = false;
+
 		
 		vector<string> argv_table = retrieve_argv(sscmd);   // parse out cmd before sign |!>
 		string sign_number;
@@ -215,7 +211,6 @@ void parse_cmd(stringstream &sscmd){
 			execvp(pargv[0], (char **) pargv);
 			if(execvp(pargv[0], (char **) pargv) == -1 ){
 				fprintf(stderr,"Unknown command: [%s].\n",pargv[0]);
-				unknown_cmd = true; //unknown command still not work. if "ls | cd", pipe still remain in the npshell. 
 			}
 			exit(-1);
 
