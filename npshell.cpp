@@ -106,7 +106,6 @@ void parse_cmd(stringstream &sscmd){
 		file_flag	= false;
 		target_flag = false;
 
-		
 		vector<string> argv_table = retrieve_argv(sscmd);   // parse out cmd before sign |!>
 		string sign_number;
 		sscmd >> sign_number;
@@ -142,7 +141,6 @@ void parse_cmd(stringstream &sscmd){
 			break;
 		}
 		//if upcomming child process is target or not.
-		int target_flag = false;
 		int pop_out_index = -1;
 		for(int i = 0; i< pipe_vector.size(); i++){
 			if(pipe_vector[i].get_count() == 0){
@@ -189,7 +187,6 @@ void parse_cmd(stringstream &sscmd){
 			if(target_flag == true){
 				dup2(newProcessIn, STDIN_FILENO);  //input stream never be the same as STDIN_NO
 				close(newProcessIn);
-
 			}
 			if(pipe_flag == true){
 				close(current_pipe_record.get_read());
@@ -232,11 +229,9 @@ void parse_cmd(stringstream &sscmd){
 				int status;															
 				waitpid(pid, &status, 0);
 			}
-			
 		}
 	}
 }
-
 int main(){
 	setenv("PATH", "bin:.", 1) ; 
     string cmd;
