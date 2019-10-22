@@ -31,11 +31,6 @@ class Pipe_class{
 	void creat_pipe(){
 		pipe(pfd);
 	}
-	void close_pipe(){
-		close(pfd[0]);
-		close(pfd[1]);
-	}
-	
 		int pfd[2];
 		int numPipe_count;
 };
@@ -221,7 +216,6 @@ void parse_cmd(stringstream &sscmd){
 				close(newProcessOut);
 			}
 			if(target_flag == true){
-				//pipe_reached_target.close_pipe();
 				close(pipe_reached_target.get_read());
 				pipe_vector.erase(pipe_vector.begin()+pop_out_index);
 			}
