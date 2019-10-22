@@ -89,10 +89,10 @@ vector<string> retrieve_argv(stringstream &ss){
 }
 void parse_cmd(stringstream &sscmd){
 	bool pipe_flag;	
-	bool pipe_create_flag;
 	bool shockMarckflag;
 	bool file_flag;
 	bool target_flag;
+	bool pipe_create_flag;
 	Pipe_class current_pipe_record;
 	Pipe_class pipe_reached_target;
 
@@ -101,10 +101,10 @@ void parse_cmd(stringstream &sscmd){
  		int newProcessOut = STDOUT_FILENO;
 		int newProcessErr = STDERR_FILENO;
 		pipe_flag = false;
-		pipe_create_flag = false;
 		shockMarckflag = false;
 		file_flag	= false;
 		target_flag = false;
+		pipe_create_flag = false;
 
 		vector<string> argv_table = retrieve_argv(sscmd);   // parse out cmd before sign |!>
 		string sign_number;
