@@ -1,6 +1,8 @@
-#include <iostream>		
+#include <iostream>
+#include <string>		
 #include <cstring>		//strchr()
 #include <vector>
+#include <algorithm>    // std::replace
 #include <sstream>
 #include <stdio.h>  		// fprint error
 #include <stdlib.h>		//setenv
@@ -8,6 +10,8 @@
 #include <sys/types.h> //								fork() 
 #include <sys/wait.h>  //wait()
 #include <fcntl.h>		//open()
+#include <string.h>	//for version2 at line 135-145 strtok
+#include <stdlib.h>	//for version2 at line 135-145 strtok
 bool shell_exit = false;
 
 using namespace std;
@@ -31,6 +35,11 @@ class Pipe_class{
 	void creat_pipe(){
 		pipe(pfd);
 	}
+	void close_pipe(){
+		close(pfd[0]);
+		close(pfd[1]);
+	}
+	
 		int pfd[2];
 		int numPipe_count;
 };
@@ -48,7 +57,7 @@ void convert_argv_to_consntchar(const char *argv[], vector<string> &argv_table) 
 bool special_cmd(stringstream &sscmd){
 	stringstream ss;
 	string cmdline = sscmd.str();
-    string parsed_word;
+    string parsed_word, cmd;
 	
 	ss << cmdline;
     ss>> parsed_word;
@@ -62,11 +71,9 @@ bool special_cmd(stringstream &sscmd){
 		return true;
     }
     else if(parsed_word == "setenv"){
+        ss >> cmd;
         ss >> parsed_word;
-        if(parsed_word == "PATH"){
-            ss >> parsed_word;
-            setenv("PATH", parsed_word.c_str(), 1) ;   
-        } 
+        setenv(cmd.c_str(), parsed_word.c_str(), 1) ;   
 		return true;
     }else if (parsed_word == "exit"){
 			shell_exit = true;
@@ -84,34 +91,59 @@ vector<string> retrieve_argv(stringstream &ss){
 }
 void parse_cmd(stringstream &sscmd){
 	bool pipe_flag;	
+	bool pipe_create_flag;
 	bool shockMarckflag;
 	bool file_flag;
 	bool target_flag;
-	bool pipe_create_flag;
+	bool unknown_cmd = false;     //unknown command still not work. if "ls | cd", pipe still remain in the npshell. 
 	Pipe_class current_pipe_record;
 	Pipe_class pipe_reached_target;
 
-	while( !sscmd.eof()){      			//check sstream of cmdline is not eof.
+	while( !sscmd.eof() && !unknown_cmd){      			//check sstream of cmdline is not eof.
+		//unknown command still not work. if "ls | cd", pipe still remain in the npshell. 
 		int newProcessIn = STDIN_FILENO;   //shell process's fd 0,1,2 are original one. never changed.
  		int newProcessOut = STDOUT_FILENO;
 		int newProcessErr = STDERR_FILENO;
 		pipe_flag = false;
+		pipe_create_flag = false;
 		shockMarckflag = false;
 		file_flag	= false;
 		target_flag = false;
-		pipe_create_flag = false;
-
+		unknown_cmd = false;
+		
 		vector<string> argv_table = retrieve_argv(sscmd);   // parse out cmd before sign |!>
+		if (argv_table.empty())
+			break;
 		string sign_number;
+		char *pch;
+		int pipnumber = 0;
 		sscmd >> sign_number;
+		int test = 0;
 		switch(sign_number[0]){
 		case '|':		
 			 //may not creat a pipe, need to check if target the same as previous process. 
 			//if so, store current_numPipe_at   in global vector.
 			pipe_flag = true;
 			if( isdigit( sign_number[1]) ){			//don't pop sign, in case of '|' at the end of cmd.
-				sign_number = sign_number.substr(1);				//skip the first charactor.		
-				current_pipe_record.set_numPipe_count(atoi(sign_number.c_str()));
+				sign_number = sign_number.substr(1); //skip the first charactor.	
+				replace(sign_number.begin(), sign_number.end(), '+', ' ');
+				stringstream numb(sign_number);
+				while (!numb.eof()){
+					numb >> test;
+					pipnumber += test;
+				}
+				/*
+				 //version 2 which fucked me 
+				char temp[sign_number.length()+1];
+				strcpy(temp,sign_number.c_str());
+				pch = strtok(temp,"+");
+				while(pch != NULL){
+					test = atoi(pch);
+					pipnumber += test;
+					pch = strtok(NULL,"+");
+				}
+				*/
+				current_pipe_record.set_numPipe_count(pipnumber);
 			} else {
 				current_pipe_record.set_numPipe_count(1);
 			}
@@ -136,6 +168,7 @@ void parse_cmd(stringstream &sscmd){
 			break;
 		}
 		//if upcomming child process is target or not.
+		int target_flag = false;
 		int pop_out_index = -1;
 		for(int i = 0; i< pipe_vector.size(); i++){
 			if(pipe_vector[i].get_count() == 0){
@@ -182,6 +215,7 @@ void parse_cmd(stringstream &sscmd){
 			if(target_flag == true){
 				dup2(newProcessIn, STDIN_FILENO);  //input stream never be the same as STDIN_NO
 				close(newProcessIn);
+
 			}
 			if(pipe_flag == true){
 				close(current_pipe_record.get_read());
@@ -203,6 +237,7 @@ void parse_cmd(stringstream &sscmd){
 			execvp(pargv[0], (char **) pargv);
 			if(execvp(pargv[0], (char **) pargv) == -1 ){
 				fprintf(stderr,"Unknown command: [%s].\n",pargv[0]);
+				unknown_cmd = true; //unknown command still not work. if "ls | cd", pipe still remain in the npshell. 
 			}
 			exit(-1);
 
@@ -216,6 +251,7 @@ void parse_cmd(stringstream &sscmd){
 				close(newProcessOut);
 			}
 			if(target_flag == true){
+				//pipe_reached_target.close_pipe();
 				close(pipe_reached_target.get_read());
 				pipe_vector.erase(pipe_vector.begin()+pop_out_index);
 			}
@@ -223,9 +259,11 @@ void parse_cmd(stringstream &sscmd){
 				int status;															
 				waitpid(pid, &status, 0);
 			}
+			
 		}
 	}
 }
+
 int main(){
 	setenv("PATH", "bin:.", 1) ; 
     string cmd;
